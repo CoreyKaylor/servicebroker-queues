@@ -1,0 +1,1 @@
+The library is a port of rhino-queues to use SQL Server Service Broker.
