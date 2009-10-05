@@ -43,9 +43,6 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
-    <Reference Include="System.Runtime.Serialization">
-      <RequiredTargetFramework>3.0</RequiredTargetFramework>
-    </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -68,6 +65,7 @@
     <Compile Include="Storage\QueueActions.cs" />
     <Compile Include="Storage\QueueStorage.cs" />
     <Compile Include="Storage\SchemaCreator.cs" />
+    <Compile Include="Storage\SerializationExtensions.cs" />
     <Compile Include="Storage\StorageUtil.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

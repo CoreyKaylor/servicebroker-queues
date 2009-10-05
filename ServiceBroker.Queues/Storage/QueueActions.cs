@@ -47,13 +47,7 @@ namespace ServiceBroker.Queues.Storage
 
         public void RegisterToSend(Uri destination, MessageEnvelope payload)
         {
-            byte[] data;
-            using(var ms = new MemoryStream())
-            {
-                var serializer = new NetDataContractSerializer();
-                serializer.Serialize(ms, payload);
-                data = ms.ToArray();
-            }
+            byte[] data = payload.Serialize();
             actions.ExecuteCommand("[Bus].[RegisterToSend]", cmd =>
             {
                 cmd.CommandType = CommandType.StoredProcedure;
@@ -67,7 +61,7 @@ namespace ServiceBroker.Queues.Storage
                 cmd.Parameters.AddWithValue("@data", data);
                 cmd.ExecuteNonQuery();
             });
-            logger.DebugFormat("Created output message for 'net.tcp://{0}:{1}'",
+            logger.DebugFormat("Created output message for 'tcp://{0}:{1}'",
                                destination.Host,
                                destination.Port
                 );
@@ -76,13 +70,9 @@ namespace ServiceBroker.Queues.Storage
         private static MessageEnvelope Fill(IDataRecord reader)
         {
             var conversationId = reader.GetGuid(0);
-            using (var stream = new MemoryStream((byte[])reader.GetValue(1)))
-            {
-                var serializer = new NetDataContractSerializer();
-                var message = (MessageEnvelope)serializer.ReadObject(stream);
-                message.ConversationId = conversationId;
-                return message;
-            }
+        	var messageEnvelope = ((byte[]) reader.GetValue(1)).ToMessageEnvelope();
+        	messageEnvelope.ConversationId = conversationId;
+        	return messageEnvelope;
         }
     }
 }
