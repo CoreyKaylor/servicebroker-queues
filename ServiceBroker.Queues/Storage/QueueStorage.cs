@@ -31,11 +31,11 @@ namespace ServiceBroker.Queues.Storage
         {
             try
             {
-                if(isUserInstance)
-                    StorageUtil.PurgeNonQueueInformation(database, isUserInstance);
                 SqlConnection.ClearAllPools();
                 EnsureDatabaseIsCreated();
                 SetIdFromDb();
+				if (isUserInstance)
+					StorageUtil.PurgeAll(database);
             }
             catch (Exception e)
             {
@@ -53,7 +53,7 @@ namespace ServiceBroker.Queues.Storage
                     using (var connection = new SqlConnection(connectionString))
                     {
                         connection.Open();
-                        using (var sqlCommand = new SqlCommand("select * from [Bus].[Detail]", connection))
+                        using (var sqlCommand = new SqlCommand("select * from [Queue].[Detail]", connection))
                         using (var reader = sqlCommand.ExecuteReader(CommandBehavior.SingleRow))
                         {
                             if (reader == null || !reader.Read())
@@ -125,5 +125,18 @@ namespace ServiceBroker.Queues.Storage
                 action(qa);
             }
         }
+
+		public void ExecuteNonQueryOnDbConnection(SqlCommand command, Action<SqlCommand> action)
+		{
+			using (var connection = new SqlConnection(connectionString))
+			{
+				connection.Open();
+				using (command)
+				{
+					command.Connection = connection;
+					action(command);
+				}
+			}
+		}
     }
 }

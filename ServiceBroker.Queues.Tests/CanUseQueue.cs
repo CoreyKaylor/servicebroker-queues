@@ -13,8 +13,6 @@ namespace ServiceBroker.Queues.Tests
         public CanUseQueue()
         {
             qf = new QueueStorage("testqueue", true, queueUri.Port);
-            StorageUtil.PurgeNonQueueInformation("testqueue", true);
-            StorageUtil.PurgeQueueData("testqueue", "localhost:2204/h", true);
             qf.Initialize();
             qf.Global(actions =>
             {

@@ -2,7 +2,6 @@ using System;
 using System.Text;
 using System.Threading;
 using System.Transactions;
-using ServiceBroker.Queues.Storage;
 using Xunit;
 
 namespace ServiceBroker.Queues.Tests
@@ -14,8 +13,6 @@ namespace ServiceBroker.Queues.Tests
 
         public ReceivingFromServiceBrokerQueue()
         {
-            StorageUtil.PurgeNonQueueInformation("testqueue", true);
-            StorageUtil.PurgeQueueData("testqueue", "localhost:2204/h", true);
             queueManager = new QueueManager("testqueue", true, queueUri.Port);
             queueManager.CreateQueues(queueUri);
         }

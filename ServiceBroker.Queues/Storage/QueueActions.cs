@@ -27,7 +27,7 @@ namespace ServiceBroker.Queues.Storage
         public MessageEnvelope Dequeue()
         {
             MessageEnvelope message = null;
-            actions.ExecuteCommand("[Bus].[Dequeue]", cmd =>
+            actions.ExecuteCommand("[Queue].[Dequeue]", cmd =>
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@queueName", queueUri.ToServiceName());
@@ -48,7 +48,7 @@ namespace ServiceBroker.Queues.Storage
         public void RegisterToSend(Uri destination, MessageEnvelope payload)
         {
             byte[] data = payload.Serialize();
-            actions.ExecuteCommand("[Bus].[RegisterToSend]", cmd =>
+            actions.ExecuteCommand("[Queue].[RegisterToSend]", cmd =>
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@localServiceName", queueUri.ToServiceName());
