@@ -9,34 +9,38 @@ namespace ServiceBroker.Queues.Storage
 {
 	public static class SqlFileCommandExecutor
 	{
-		public static void ExecuteSqlScripts(string database, string directory, Func<string, string> replacementFieldAction)
+		internal static void ExecuteSqlScripts(string connectionStringName, string directory, Func<string, string> replacementFieldAction)
 		{
-			var connectionStringSettings = ConfigurationManager.ConnectionStrings[database];
+			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
 			var connectionString = connectionStringSettings.ConnectionString;
+			var connectionStringBuilder = new SqlConnectionStringBuilder(connectionString);
+			var databaseName = connectionStringBuilder.InitialCatalog;
+			connectionStringBuilder.InitialCatalog = string.Empty;
 
 			foreach (var file in Directory.GetFiles(directory, "*.sql").OrderBy(f => f))
 			{
 				var sql = File.ReadAllText(file);
+				sql = sql.Replace("<databasename, sysname, queuedb>", databaseName);
 				sql = replacementFieldAction(sql);
 				var sqlStatements = sql.Split(new[] { "GO" }, StringSplitOptions.None);
-				using (var localConnection = new SqlConnection(connectionString))
+				using (var localConnection = new SqlConnection(connectionStringBuilder.ConnectionString))
 				{
 					if (localConnection.State == ConnectionState.Closed)
 						localConnection.Open();
-					foreach (var cmd in sqlStatements)
+					foreach (var commandText in sqlStatements)
 					{
-						ExecuteCommand(cmd, localConnection, createCommand => createCommand.ExecuteNonQuery());
+						using (var cmd = new SqlCommand(commandText, localConnection))
+						{
+							cmd.ExecuteNonQuery();
+						}
 					}
 				}
 			}
 		}
 
-		private static void ExecuteCommand(string commandText, SqlConnection connection, Action<SqlCommand> command)
+		internal static void ExecuteSqlScripts(string connectionStringName, string directory)
 		{
-			using (var cmd = new SqlCommand(commandText, connection))
-			{
-				command(cmd);
-			}
+			ExecuteSqlScripts(connectionStringName, directory, sql => sql);
 		}
 	}
 }

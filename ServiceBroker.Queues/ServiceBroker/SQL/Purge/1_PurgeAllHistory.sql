@@ -1,4 +1,4 @@
-﻿USE {databasename}
+﻿USE <databasename, sysname, queuedb>
 GO
 TRUNCATE TABLE [Queue].[MessageHistory]
 GO

@@ -1,105 +1,5 @@
-﻿USE master;
+﻿USE [<databasename, sysname, queuedb>]
 GO
-
-SET ANSI_NULL_DFLT_ON ON;
-SET ANSI_NULLS ON;
-SET ANSI_PADDING ON;
-SET ANSI_WARNINGS ON;
-SET ARITHABORT ON;
-SET CONCAT_NULL_YIELDS_NULL ON;
-SET QUOTED_IDENTIFIER ON;
-SET XACT_ABORT ON;
-
-DECLARE @databaseName SYSNAME = '{databasename}';
-
-IF DB_ID (@databaseName) IS NOT NULL
-BEGIN
-	ALTER DATABASE {databasename}
-	SET single_user WITH ROLLBACK immediate 
-	DROP DATABASE {databasename};
-END 
-GO
-
-DECLARE @databaseName SYSNAME = '{databasename}';
-
-DECLARE @dataDir NVARCHAR(260);
-EXEC master.sys.xp_instance_regread N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'DefaultData', @dataDir OUTPUT, 'no_output';
-IF ((@dataDir IS NOT NULL) AND (LEN(@dataDir) > 0))
-BEGIN
-	IF (CHARINDEX(N'\', @dataDir, LEN(@dataDir)) = 0)
-	BEGIN
-		SET @dataDir = @dataDir + N'\';
-	END
-END
-ELSE
-BEGIN
-	SET @dataDir =
-	(
-		SELECT SUBSTRING(physical_name, 1, LEN(physical_name) - (CHARINDEX(N'\', REVERSE(physical_name)) - 1))
-		FROM master.sys.database_files
-		WHERE type = 0
-	);
-END
-
-DECLARE @logDir NVARCHAR(260);
-EXEC master.sys.xp_instance_regread N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer', N'DefaultLog', @logDir OUTPUT, 'no_output';
-IF ((@logDir IS NOT NULL) AND (LEN(@logDir) > 0))
-BEGIN
-	IF (CHARINDEX(N'\', @logDir, LEN(@logDir)) = 0)
-	BEGIN
-		SET @logDir = @logDir + N'\';
-	END
-END
-ELSE
-BEGIN
-	SET @logDir =
-	(
-		SELECT SUBSTRING(physical_name, 1, LEN(physical_name) - (CHARINDEX(N'\', REVERSE(physical_name)) - 1))
-		FROM master.sys.database_files
-		WHERE type = 1
-	);
-END
-
-DECLARE @dataPath NVARCHAR(260) = @dataDir + @databaseName + N'.mdf';
-DECLARE @logName NVARCHAR(260) = @databaseName + N'_log';
-DECLARE @logPath NVARCHAR(260) = @logDir + @logName + N'.ldf';
-
-DECLARE @setupDatabaseCommand NVARCHAR(MAX) =
-N'CREATE DATABASE ' + QUOTENAME(@databaseName, N'[') + N'
-ON (NAME = ' + QUOTENAME(@databaseName, N'[') + N', FILENAME = N''' + @dataPath + N''', SIZE = 64 MB, MAXSIZE = UNLIMITED, FILEGROWTH = 10%)
-LOG ON (NAME = ' + QUOTENAME(@logName, N'[') + N', FILENAME = N''' + @logPath + N''', SIZE = 128 MB, MAXSIZE = UNLIMITED, FILEGROWTH = 10%)
-COLLATE Latin1_General_100_CI_AS
-WITH DB_CHAINING OFF, TRUSTWORTHY OFF;
-
-ALTER DATABASE ' + QUOTENAME(@databaseName, N'[') + '
-SET
-	AUTO_CREATE_STATISTICS ON,
-	AUTO_SHRINK OFF,
-	AUTO_UPDATE_STATISTICS_ASYNC ON,
-	DATE_CORRELATION_OPTIMIZATION OFF,
-	RECOVERY SIMPLE,
-	PAGE_VERIFY CHECKSUM,
-	ALLOW_SNAPSHOT_ISOLATION OFF, -- The queues require specific locking semantics that are not compatible with snapshot isolation.
-	ANSI_NULL_DEFAULT ON,
-	ANSI_NULLS ON,
-	ANSI_PADDING ON,
-	ANSI_WARNINGS ON,
-	ARITHABORT ON,
-	COMPATIBILITY_LEVEL = 100,
-	CONCAT_NULL_YIELDS_NULL ON,
-	QUOTED_IDENTIFIER ON,
-	NUMERIC_ROUNDABORT OFF;';
-
-IF(@setupDatabaseCommand IS NULL)
-BEGIN
-	RAISERROR('Setup command is null and cannot continue', 16, 1)
-END 
-EXECUTE (@setupDatabaseCommand);
-
-GO
-
-	USE {databasename}
-	GO
 
 CREATE SCHEMA [Queue]
 GO
@@ -122,37 +22,19 @@ CREATE CONTRACT [http://servicebroker.queues.com/servicebroker/2009/09/ServiceBu
 )
 GO
 
-IF EXISTS (SELECT * FROM sys.[endpoints] e WHERE e.[name] = 'ServiceBusEndpoint')
+IF NOT EXISTS (SELECT * FROM sys.[endpoints] e WHERE e.[name] = 'ServiceBusEndpoint')
 BEGIN
-	DROP ENDPOINT ServiceBusEndpoint
+	CREATE ENDPOINT ServiceBusEndpoint
+	STATE = STARTED
+	AS TCP 
+	(
+		LISTENER_PORT = <port, , 2204>
+	)
+	FOR SERVICE_BROKER 
+	(
+		AUTHENTICATION = WINDOWS
+	)
 END
-GO
-
-CREATE ENDPOINT ServiceBusEndpoint
-STATE = STARTED
-AS TCP 
-(
-	LISTENER_PORT = {port}
-)
-FOR SERVICE_BROKER 
-(
-	AUTHENTICATION = WINDOWS
-)
-GO
-
-CREATE QUEUE NotificationQueue
-GO
-
-CREATE SERVICE NotificationService
-ON QUEUE NotificationQueue
-(
-	[http://schemas.microsoft.com/SQL/Notifications/PostEventNotification]
-)
-GO
-
-CREATE ROUTE [NotificationService]
-	WITH SERVICE_NAME = 'NotificationService',
-	ADDRESS = 'LOCAL'
 GO
 
 USE MASTER;
@@ -161,7 +43,7 @@ GO
 GRANT CONNECT ON ENDPOINT::ServiceBusEndpoint TO [public];
 GO 
 
-USE [{databasename}];
+USE [<databasename, sysname, queuedb>];
 GO
 
 CREATE TABLE [Queue].[OutgoingHistory]
@@ -288,29 +170,6 @@ END
 END
 GO
 
-CREATE PROCEDURE GetQueueWithMessages
-AS
-BEGIN
-
-DECLARE @cg UNIQUEIDENTIFIER
-DECLARE @ch UNIQUEIDENTIFIER
-DECLARE @messagetypename NVARCHAR(256)
-DECLARE	@messagebody XML;
-
-	WAITFOR (
-			RECEIVE TOP (1)
-				@cg = conversation_group_id,
-				@ch = conversation_handle,
-				@messagetypename = message_type_name,
-				@messagebody = CAST(message_body AS XML)
-			FROM NotificationQueue
-		), TIMEOUT 15000
-	
-	--select the queue name from the xml message to indicate which queue needs activation
-	SELECT @messagebody.value('/EVENT_INSTANCE[1]/ObjectName[1]', 'NVARCHAR(MAX)')
-END
-GO
-
 CREATE PROCEDURE [Queue].[RegisterToSend]
 (
 	@localServiceName VARCHAR(255),
@@ -405,15 +264,6 @@ BEGIN
 		SET @sql = @sql + ' END';
 
 		-- Execute the dynamic T-SQL statement
-		EXECUTE(@sql);
-		
-		SET @sql = 'CREATE EVENT NOTIFICATION [' + @address + N'/notification]
-		ON QUEUE [' + @address + N'/queue]
-		FOR QUEUE_ACTIVATION
-		TO SERVICE ''NotificationService'', ''current database'''
-		
-		--create a notification for activation used to determine when to start new processing threads
-		--avoids the need for waitfor i.e. not compatible with MSDTC
 		EXECUTE(@sql);
 	END
 END

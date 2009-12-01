@@ -5,14 +5,14 @@ using Xunit;
 
 namespace ServiceBroker.Queues.Tests
 {
-    public class CanUseQueue
+	public class CanUseQueue : QueueTest
     {
         private readonly Uri queueUri = new Uri("tcp://localhost:2204/h");
         private readonly QueueStorage qf;
 
-        public CanUseQueue()
+        public CanUseQueue() : base("testqueue")
         {
-            qf = new QueueStorage("testqueue", true, queueUri.Port);
+            qf = new QueueStorage("testqueue");
             qf.Initialize();
             qf.Global(actions =>
             {

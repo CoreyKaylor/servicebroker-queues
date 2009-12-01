@@ -6,15 +6,15 @@ using Xunit;
 
 namespace ServiceBroker.Queues.Tests
 {
-    public class ReceivingFromServiceBrokerQueue : IDisposable
+    public class ReceivingFromServiceBrokerQueue : QueueTest, IDisposable
     {
         private readonly QueueManager queueManager;
         private readonly Uri queueUri = new Uri("tcp://localhost:2204/h");
 
-        public ReceivingFromServiceBrokerQueue()
+        public ReceivingFromServiceBrokerQueue() : base("testqueue")
         {
-            queueManager = new QueueManager("testqueue", true, queueUri.Port);
-            queueManager.CreateQueues(queueUri);
+            queueManager = new QueueManager("testqueue");
+			queueManager.CreateQueues(queueUri);
         }
 
         public void Dispose()
@@ -22,7 +22,7 @@ namespace ServiceBroker.Queues.Tests
             queueManager.Dispose();
         }
 
-        [Fact]
+    	[Fact]
         public void CanReceiveFromQueue()
         {
             using (var tx = new TransactionScope())
@@ -35,17 +35,16 @@ namespace ServiceBroker.Queues.Tests
                 tx.Complete();
             }
             Thread.Sleep(50);
-            var queueWithMessage = queueManager.WaitForQueueWithMessageNotification();
             using(var tx = new TransactionScope())
             {
-                var message = queueManager.GetQueue(queueWithMessage).Receive();
+                var message = queueManager.GetQueue(queueUri).Receive();
                 Assert.Equal("hello", Encoding.Unicode.GetString(message.Data));
                 tx.Complete();
             }
 
             using (var tx = new TransactionScope())
             {
-                var message = queueManager.GetQueue(queueWithMessage).Receive();
+                var message = queueManager.GetQueue(queueUri).Receive();
                 Assert.Null(message);
                 tx.Complete();
             }
@@ -64,16 +63,15 @@ namespace ServiceBroker.Queues.Tests
                 tx.Complete();
             }
             Thread.Sleep(30);
-            var queueWithMessage = queueManager.WaitForQueueWithMessageNotification();
 
             using (new TransactionScope())
             {
-                var message = queueManager.GetQueue(queueWithMessage).Receive();
+                var message = queueManager.GetQueue(queueUri).Receive();
                 Assert.Equal("hello", Encoding.Unicode.GetString(message.Data));
             }
             using (new TransactionScope())
             {
-                var message = queueManager.GetQueue(queueWithMessage).Receive();
+                var message = queueManager.GetQueue(queueUri).Receive();
                 Assert.Equal("hello", Encoding.Unicode.GetString(message.Data));
             }
         }

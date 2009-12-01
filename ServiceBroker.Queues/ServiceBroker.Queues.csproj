@@ -70,7 +70,7 @@
     <Compile Include="Storage\StorageUtil.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ServiceBroker\SQL\Create\1_CreateDatabase.sql">
+    <Content Include="ServiceBroker\SQL\Create\1_CreateQueueSchema.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ServiceBroker\SQL\Purge\1_PurgeAllHistory.sql">

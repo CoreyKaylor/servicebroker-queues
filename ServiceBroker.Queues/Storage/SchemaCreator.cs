@@ -1,5 +1,6 @@
 using System;
 using System.Data.SqlClient;
+using System.Diagnostics;
 
 namespace ServiceBroker.Queues.Storage
 {
@@ -10,14 +11,13 @@ namespace ServiceBroker.Queues.Storage
             get { return "1.0"; }
         }
 
-        public void Create(string database, int port)
+		[Conditional("QUEUE_MODIFY")]
+        public void Create(string connectionStringName, int port)
         {
-        	var dbName = database.GetUserDatabaseName();
-			SqlFileCommandExecutor.ExecuteSqlScripts(database, Environment.CurrentDirectory + "\\ServiceBroker\\SQL\\Create",
+			SqlFileCommandExecutor.ExecuteSqlScripts(connectionStringName, Environment.CurrentDirectory + "\\ServiceBroker\\SQL\\Create",
 				sql =>
 				{
-					sql = sql.Replace("{databasename}", dbName);
-					sql = sql.Replace("{port}", port.ToString());
+					sql = sql.Replace("<port, , 2204>", port.ToString());
 					return sql;
 				});
            

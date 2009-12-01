@@ -9,15 +9,13 @@ namespace ServiceBroker.Queues
     public class QueueManager : IDisposable
     {
         private volatile bool wasDisposed;
-        private readonly string databaseName;
         private readonly Timer purgeOldDataTimer;
         private readonly QueueStorage queueStorage;
         private readonly ILog logger = LogManager.GetLogger(typeof(QueueManager));
 
-        public QueueManager(string databaseName, bool isUserInstance, int port)
+        public QueueManager(string connectionStringName)
         {
-            this.databaseName = databaseName;
-            queueStorage = new QueueStorage(databaseName, isUserInstance, port);
+            queueStorage = new QueueStorage(connectionStringName);
             queueStorage.Initialize();
 
             purgeOldDataTimer = new Timer(PurgeOldData, null, TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(3));
@@ -39,11 +37,6 @@ namespace ServiceBroker.Queues
             {
                 logger.Warn("Failed to purge old data from the system", exception);
             }
-        }
-
-        public string DatabaseName
-        {
-            get { return databaseName; }
         }
 
         public void Dispose()

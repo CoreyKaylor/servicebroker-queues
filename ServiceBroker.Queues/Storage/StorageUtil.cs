@@ -1,17 +1,14 @@
 using System;
+using System.Diagnostics;
 
 namespace ServiceBroker.Queues.Storage
 {
     public class StorageUtil
     {
-        public static void PurgeAll(string database)
+		[Conditional("QUEUE_MODIFY")]
+        public static void PurgeAll(string connectionStringName)
         {
-        	SqlFileCommandExecutor.ExecuteSqlScripts(database, Environment.CurrentDirectory + "\\ServiceBroker\\SQL\\Purge",
-													 sql =>
-													 {
-														 sql = sql.Replace("{databasename}", database.GetUserDatabaseName());
-														 return sql;
-													 });
+			SqlFileCommandExecutor.ExecuteSqlScripts(connectionStringName, Environment.CurrentDirectory + "\\ServiceBroker\\SQL\\Purge");
         }
     }
 }

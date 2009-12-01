@@ -1,8 +1,6 @@
 using System;
 using System.Data;
 using log4net;
-using System.IO;
-using System.Runtime.Serialization;
 
 namespace ServiceBroker.Queues.Storage
 {
