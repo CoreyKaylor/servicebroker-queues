@@ -10,9 +10,9 @@ namespace ServiceBroker.Queues.Storage
 			using (var stream = new MemoryStream())
 			using (var writer = new BinaryWriter(stream))
 			{
-				writer.Write(messageEnvelope.DeferProcessingUntilTime.HasValue);
-				if(messageEnvelope.DeferProcessingUntilTime.HasValue)
-					writer.Write(messageEnvelope.DeferProcessingUntilTime.Value.ToBinary());
+				writer.Write(messageEnvelope.DeferProcessingUntilUtcTime.HasValue);
+				if(messageEnvelope.DeferProcessingUntilUtcTime.HasValue)
+					writer.Write(messageEnvelope.DeferProcessingUntilUtcTime.Value.ToBinary());
 				writer.Write(messageEnvelope.Data.Length);
 				writer.Write(messageEnvelope.Data);
 				writer.Write(messageEnvelope.Headers.Count);
@@ -34,7 +34,7 @@ namespace ServiceBroker.Queues.Storage
 				var messageEnvelope = new MessageEnvelope();
 				if(br.ReadBoolean())
 				{
-					messageEnvelope.DeferProcessingUntilTime = DateTime.FromBinary(br.ReadInt64());
+					messageEnvelope.DeferProcessingUntilUtcTime = DateTime.FromBinary(br.ReadInt64());
 				}
 				var length = br.ReadInt32();
 				messageEnvelope.Data = br.ReadBytes(length);

@@ -11,7 +11,7 @@ namespace ServiceBroker.Queues
         }
 
         public Guid ConversationId { get; set; }
-        public DateTime? DeferProcessingUntilTime { get; set; }
+        public DateTime? DeferProcessingUntilUtcTime { get; set; }
         public byte[] Data { get; set; }
         public NameValueCollection Headers { get; set; }
     }

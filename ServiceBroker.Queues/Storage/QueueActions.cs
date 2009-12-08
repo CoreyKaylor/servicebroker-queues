@@ -54,7 +54,7 @@ namespace ServiceBroker.Queues.Storage
                 cmd.Parameters.AddWithValue("@route", string.Format("{0}://{1}", destination.Scheme, destination.Authority));
                 cmd.Parameters.AddWithValue("@sizeOfData", payload.Data.Length);
                 cmd.Parameters.AddWithValue("@deferProcessingUntilTime",
-                                            (object)payload.DeferProcessingUntilTime ?? DBNull.Value);
+                                            (object)payload.DeferProcessingUntilUtcTime ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@sentAt", DateTime.UtcNow);
                 cmd.Parameters.AddWithValue("@data", data);
                 cmd.ExecuteNonQuery();

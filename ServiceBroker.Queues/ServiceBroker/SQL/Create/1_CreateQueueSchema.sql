@@ -55,7 +55,8 @@ CREATE TABLE [Queue].[OutgoingHistory]
 	[sizeOfData] INT NOT NULL,
 	[sentAt] DATETIME2(7) NOT NULL,
 	[deferProcessingUntilTime] DATETIME2(7),
-	[data] VARBINARY(MAX)
+	[data] VARBINARY(MAX),
+	[sent] BIT
 )
 GO
 
@@ -129,24 +130,32 @@ BEGIN
 		END
 		ELSE IF (@messageTypeName = 'http://schemas.microsoft.com/SQL/ServiceBroker/DialogTimer')
 		BEGIN
+			DECLARE @outgoingHistoryId INT
 			DECLARE @conversationHandle UNIQUEIDENTIFIER
 			DECLARE @messageData VARBINARY(MAX)
 
 			DECLARE deferredMessages CURSOR FAST_FORWARD READ_ONLY FOR
-			SELECT oh.[conversationHandle], oh.[data]
+			SELECT oh.[messageId], oh.[conversationHandle], oh.[data]
 			FROM [Queue].[OutgoingHistory] oh WITH(READPAST)
-			WHERE oh.[deferProcessingUntilTime] <= sysutcdatetime()
+			WHERE oh.[deferProcessingUntilTime] <= sysutcdatetime() AND oh.[sent] = 0
 
 			OPEN deferredMessages
 
-			FETCH NEXT FROM deferredMessages INTO @conversationHandle, @messageData
+			FETCH NEXT FROM deferredMessages INTO @outgoingHistoryId, @conversationHandle, @messageData
 
 			WHILE @@FETCH_STATUS = 0
 			BEGIN
 
-			SEND ON CONVERSATION @conversationHandle MESSAGE TYPE [http://servicebroker.queues.com/servicebroker/2009/09/Message] (@messageData);
-
-			FETCH NEXT FROM deferredMessages INTO @conversationHandle, @messageData
+			BEGIN TRY
+			BEGIN
+				SEND ON CONVERSATION @conversationHandle MESSAGE TYPE [http://servicebroker.queues.com/servicebroker/2009/09/Message] (@messageData);
+			END
+			END TRY
+			BEGIN CATCH
+			END CATCH
+			
+			UPDATE [Queue].[OutgoingHistory] SET [sent] = 1 WHERE [messageId] = @outgoingHistoryId
+			FETCH NEXT FROM deferredMessages INTO @outgoingHistoryId, @conversationHandle, @messageData
 
 			END
 
@@ -225,10 +234,46 @@ BEGIN
 		
 	IF (@deferProcessingUntilTime IS NULL)
 	BEGIN 
+		INSERT INTO [Queue].[OutgoingHistory] (
+		[address],
+		[route],
+		[conversationHandle],
+		[sizeOfData],
+		[deferProcessingUntilTime],
+		[sentAt],
+		[data],
+		[sent]
+		) VALUES ( 
+		/* address - varchar(255) */ @address,
+		/* route - varchar(255) */ @route,
+		/* conversationHandle uniqueidentifier */ @conversationHandle,
+		/* sizeOfData - int */ @sizeOfData,
+		/* deferProcessingUntilTime - datetime2 */ @deferProcessingUntilTime,
+		/* sentAt - datetime2 */ @sentAt,
+		/* data - varbinary(max) */ @data, 
+		/* sent - bit */ 1);
 		SEND ON CONVERSATION @conversationHandle MESSAGE TYPE [http://servicebroker.queues.com/servicebroker/2009/09/Message] (@data);
 	END
 	ELSE
 	BEGIN
+		INSERT INTO [Queue].[OutgoingHistory] (
+		[address],
+		[route],
+		[conversationHandle],
+		[sizeOfData],
+		[deferProcessingUntilTime],
+		[sentAt],
+		[data],
+		[sent]
+		) VALUES ( 
+		/* address - varchar(255) */ @address,
+		/* route - varchar(255) */ @route,
+		/* conversationHandle uniqueidentifier */ @conversationHandle,
+		/* sizeOfData - int */ @sizeOfData,
+		/* deferProcessingUntilTime - datetime2 */ @deferProcessingUntilTime,
+		/* sentAt - datetime2 */ @sentAt,
+		/* data - varbinary(max) */ @data,
+		/* sent - bit */ 0)
 		BEGIN CONVERSATION TIMER (@conversationHandle)
 		TIMEOUT = DATEDIFF(SECOND, SYSUTCDATETIME(), @deferProcessingUntilTime);
 	END
