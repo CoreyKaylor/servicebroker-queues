@@ -193,7 +193,7 @@ AS
 BEGIN
 	DECLARE @conversationHandle UNIQUEIDENTIFIER
 	
-	SET @conversationHandle = (SELECT TOP 1 [conversationHandle] FROM [Queue].[ConversationDialogs] WITH(READPAST) WHERE [toService] = @address AND [fromService] = @localServiceName)
+	SET @conversationHandle = (SELECT TOP 1 [conversationHandle] FROM [Queue].[ConversationDialogs] WITH(READPAST,XLOCK,ROWLOCK) WHERE [toService] = @address AND [fromService] = @localServiceName)
 
 	IF(@conversationHandle IS NULL)
 	BEGIN
