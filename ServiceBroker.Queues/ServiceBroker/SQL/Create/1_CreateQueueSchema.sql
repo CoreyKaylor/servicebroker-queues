@@ -215,23 +215,6 @@ BEGIN
 			/* createdAt - DATETIME2(7) */ SYSUTCDATETIME() ) 
 	END
 		
-	INSERT INTO [Queue].[OutgoingHistory] (
-		[address],
-		[route],
-		[conversationHandle],
-		[sizeOfData],
-		[deferProcessingUntilTime],
-		[sentAt],
-		[data]
-	) VALUES ( 
-		/* address - varchar(255) */ @address,
-		/* route - varchar(255) */ @route,
-		/* conversationHandle uniqueidentifier */ @conversationHandle,
-		/* sizeOfData - int */ @sizeOfData,
-		/* deferProcessingUntilTime - datetime2 */ @deferProcessingUntilTime,
-		/* sentAt - datetime2 */ @sentAt,
-		/* data - varbinary(max) */ @data )
-		
 	IF (@deferProcessingUntilTime IS NULL)
 	BEGIN 
 		INSERT INTO [Queue].[OutgoingHistory] (
