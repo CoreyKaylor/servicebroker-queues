@@ -462,6 +462,9 @@ GO
 GRANT EXECUTE ON [Queue].[PurgeHistoric] TO [ServiceBusOwner];
 GO
 
+GRANT EXECUTE ON [Queue].[CreateQueueIfDoesNotExist] TO [ServiceBusOwner];
+GO
+
 GRANT EXECUTE ON [Queue].[RegisterToSend] TO [ServiceBusOwner];
 GO
 
