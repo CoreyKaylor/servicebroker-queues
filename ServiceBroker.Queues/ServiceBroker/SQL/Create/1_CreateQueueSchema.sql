@@ -137,6 +137,7 @@ BEGIN
 			DECLARE deferredMessages CURSOR FAST_FORWARD READ_ONLY FOR
 			SELECT oh.[messageId], oh.[conversationHandle], oh.[data]
 			FROM [Queue].[OutgoingHistory] oh WITH(READPAST)
+			JOIN sys.conversation_endpoints ce with(nolock) on ce.[conversation_handle] = oh.[conversationHandle]
 			WHERE oh.[deferProcessingUntilTime] <= sysutcdatetime() AND oh.[sent] = 0
 
 			OPEN deferredMessages
@@ -161,6 +162,12 @@ BEGIN
 
 			CLOSE deferredMessages
 			DEALLOCATE deferredMessages
+			
+			UPDATE oh SET oh.[sent] = 1
+			FROM [Queue].[OutgoingHistory] oh
+			LEFT JOIN sys.conversation_endpoints ce on oh.[conversationHandle] = ce.[conversation_handle]
+			WHERE ce.[conversation_handle] is null
+			AND oh.[sent] = 0
 		END
 		ELSE
 		BEGIN 
