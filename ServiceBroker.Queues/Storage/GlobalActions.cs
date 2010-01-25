@@ -29,7 +29,7 @@ namespace ServiceBroker.Queues.Storage
 
         public void CreateQueue(Uri queueUri)
         {
-            ExecuteCommand("[Queue].[CreateQueueIfDoesNotExist]", cmd =>
+            ExecuteCommand("[SBQ].[CreateQueueIfDoesNotExist]", cmd =>
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@address", queueUri.ToServiceName());
@@ -39,7 +39,7 @@ namespace ServiceBroker.Queues.Storage
 
         public void DeleteHistoric()
         {
-            ExecuteCommand("[Queue].[PurgeHistoric]", cmd =>
+            ExecuteCommand("[SBQ].[PurgeHistoric]", cmd =>
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.ExecuteNonQuery();

@@ -26,7 +26,7 @@ namespace ServiceBroker.Queues.Storage
 			using (var connection = new SqlConnection(connectionStringSettings.ConnectionString))
 			{
 				connection.Open();
-				using (var sqlCommand = new SqlCommand("select * from [Queue].[Detail]", connection))
+				using (var sqlCommand = new SqlCommand("select * from [SBQ].[Detail]", connection))
 				using (var reader = sqlCommand.ExecuteReader(CommandBehavior.SingleRow))
 				{
 					if (reader == null || !reader.Read())
@@ -39,7 +39,7 @@ namespace ServiceBroker.Queues.Storage
 						throw new InvalidOperationException("The version on disk (" + schemaVersion +
 															") is different that the version supported by this library: " +
 															SchemaCreator.SchemaVersion + Environment.NewLine +
-															"You need to migrate the database version to the library version, alternatively, if the data isn't important, you can drop the items in the [Queue] schema and run the scripts to create it.");
+															"You need to migrate the database version to the library version, alternatively, if the data isn't important, you can drop the items in the [SBQ] schema and run the scripts to create it.");
 					}
 				}
 			}

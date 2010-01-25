@@ -1,8 +1,8 @@
 ﻿USE <databasename, sysname, queuedb>
 GO
-TRUNCATE TABLE [Queue].[MessageHistory]
+TRUNCATE TABLE [SBQ].[MessageHistory]
 GO
-TRUNCATE TABLE [Queue].[OutgoingHistory]
+TRUNCATE TABLE [SBQ].[OutgoingHistory]
 GO
 
 DECLARE @queueName VARCHAR(255)
@@ -31,7 +31,7 @@ BEGIN
 		)
 		
 		INSERT INTO @messages ([conversationHandle], [data])
-		EXEC [Queue].[Dequeue] @queueName
+		EXEC [SBQ].[Dequeue] @queueName
 		PRINT @queueName
 		IF NOT EXISTS (SELECT * FROM @messages)
 			BREAK
