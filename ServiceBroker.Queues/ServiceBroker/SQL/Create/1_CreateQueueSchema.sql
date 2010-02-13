@@ -191,85 +191,85 @@ GO
 
 CREATE PROCEDURE [SBQ].[RegisterToSend]
 (
-	@localServiceName VARCHAR(255),
-	@address VARCHAR(255),
-	@route VARCHAR(255),
-	@sizeOfData INT,
-	@deferProcessingUntilTime DATETIME2(7) = NULL,
-	@sentAt DATETIME2(7),
-	@data VARBINARY(MAX) = NULL
+      @localServiceName VARCHAR(255),
+      @address VARCHAR(255),
+      @route VARCHAR(255),
+      @sizeOfData INT,
+      @deferProcessingUntilTime DATETIME2(7) = NULL,
+      @sentAt DATETIME2(7),
+      @data VARBINARY(MAX) = NULL
 )
 AS 
 BEGIN
-	DECLARE @conversationHandle UNIQUEIDENTIFIER
-	
-	SET @conversationHandle = (SELECT TOP 1 [conversationHandle] FROM [SBQ].[ConversationDialogs] WITH(READPAST,XLOCK,ROWLOCK) WHERE [toService] = @address AND [fromService] = @localServiceName)
+      DECLARE @conversationHandle UNIQUEIDENTIFIER
+      
+      SET @conversationHandle = (SELECT TOP 1 [conversationHandle] FROM [SBQ].[ConversationDialogs] WITH(READPAST,XLOCK,ROWLOCK) WHERE [toService] = @address AND [fromService] = @localServiceName)
 
-	IF(@conversationHandle IS NULL)
-	BEGIN
-		BEGIN DIALOG CONVERSATION @conversationHandle
-			FROM SERVICE @localServiceName
-			TO SERVICE @address
-			ON CONTRACT [http://servicebroker.queues.com/servicebroker/2009/09/ServiceBusContract]
-			WITH ENCRYPTION = OFF;
-			
-		INSERT INTO [SBQ].[ConversationDialogs] (
-			[conversationHandle],
-			[fromService],
-			[toService],
-			[createdAt]
-		) VALUES ( 
-			/* conversationHandle - UNIQUEIDENTIFIER */ @conversationHandle,
-			/* fromService - VARCHAR(255) */ @localServiceName,
-			/* toService - VARCHAR(255) */ @address,
-			/* createdAt - DATETIME2(7) */ SYSUTCDATETIME() ) 
-	END
-		
-	IF (@deferProcessingUntilTime IS NULL)
-	BEGIN 
-		INSERT INTO [SBQ].[OutgoingHistory] (
-		[address],
-		[route],
-		[conversationHandle],
-		[sizeOfData],
-		[deferProcessingUntilTime],
-		[sentAt],
-		[data],
-		[sent]
-		) VALUES ( 
-		/* address - varchar(255) */ @address,
-		/* route - varchar(255) */ @route,
-		/* conversationHandle uniqueidentifier */ @conversationHandle,
-		/* sizeOfData - int */ @sizeOfData,
-		/* deferProcessingUntilTime - datetime2 */ @deferProcessingUntilTime,
-		/* sentAt - datetime2 */ @sentAt,
-		/* data - varbinary(max) */ @data, 
-		/* sent - bit */ 1);
-		SEND ON CONVERSATION @conversationHandle MESSAGE TYPE [http://servicebroker.queues.com/servicebroker/2009/09/Message] (@data);
-	END
-	ELSE
-	BEGIN
-		INSERT INTO [SBQ].[OutgoingHistory] (
-		[address],
-		[route],
-		[conversationHandle],
-		[sizeOfData],
-		[deferProcessingUntilTime],
-		[sentAt],
-		[data],
-		[sent]
-		) VALUES ( 
-		/* address - varchar(255) */ @address,
-		/* route - varchar(255) */ @route,
-		/* conversationHandle uniqueidentifier */ @conversationHandle,
-		/* sizeOfData - int */ @sizeOfData,
-		/* deferProcessingUntilTime - datetime2 */ @deferProcessingUntilTime,
-		/* sentAt - datetime2 */ @sentAt,
-		/* data - varbinary(max) */ @data,
-		/* sent - bit */ 0)
-		BEGIN CONVERSATION TIMER (@conversationHandle)
-		TIMEOUT = DATEDIFF(SECOND, SYSUTCDATETIME(), @deferProcessingUntilTime);
-	END
+      IF(@conversationHandle IS NULL)
+      BEGIN
+            BEGIN DIALOG CONVERSATION @conversationHandle
+                  FROM SERVICE @localServiceName
+                  TO SERVICE @address
+                  ON CONTRACT [http://servicebroker.queues.com/servicebroker/2009/09/ServiceBusContract]
+                  WITH ENCRYPTION = OFF;
+                  
+            INSERT INTO [SBQ].[ConversationDialogs] with(rowlock) (
+                  [conversationHandle],
+                  [fromService],
+                  [toService],
+                  [createdAt]
+            ) VALUES ( 
+                  /* conversationHandle - UNIQUEIDENTIFIER */ @conversationHandle,
+                  /* fromService - VARCHAR(255) */ @localServiceName,
+                  /* toService - VARCHAR(255) */ @address,
+                  /* createdAt - DATETIME2(7) */ SYSUTCDATETIME() ) 
+      END
+            
+      IF (@deferProcessingUntilTime IS NULL)
+      BEGIN 
+            INSERT INTO [SBQ].[OutgoingHistory] with(rowlock) (
+            [address],
+            [route],
+            [conversationHandle],
+            [sizeOfData],
+            [deferProcessingUntilTime],
+            [sentAt],
+            [data],
+            [sent]
+            ) VALUES ( 
+            /* address - varchar(255) */ @address,
+            /* route - varchar(255) */ @route,
+            /* conversationHandle uniqueidentifier */ @conversationHandle,
+            /* sizeOfData - int */ @sizeOfData,
+            /* deferProcessingUntilTime - datetime2 */ @deferProcessingUntilTime,
+            /* sentAt - datetime2 */ @sentAt,
+            /* data - varbinary(max) */ @data, 
+            /* sent - bit */ 1);
+            SEND ON CONVERSATION @conversationHandle MESSAGE TYPE [http://servicebroker.queues.com/servicebroker/2009/09/Message] (@data);
+      END
+      ELSE
+      BEGIN
+            INSERT INTO [SBQ].[OutgoingHistory] with(rowlock) (
+            [address],
+            [route],
+            [conversationHandle],
+            [sizeOfData],
+            [deferProcessingUntilTime],
+            [sentAt],
+            [data],
+            [sent]
+            ) VALUES ( 
+            /* address - varchar(255) */ @address,
+            /* route - varchar(255) */ @route,
+            /* conversationHandle uniqueidentifier */ @conversationHandle,
+            /* sizeOfData - int */ @sizeOfData,
+            /* deferProcessingUntilTime - datetime2 */ @deferProcessingUntilTime,
+            /* sentAt - datetime2 */ @sentAt,
+            /* data - varbinary(max) */ @data,
+            /* sent - bit */ 0)
+            BEGIN CONVERSATION TIMER (@conversationHandle)
+            TIMEOUT = DATEDIFF(SECOND, SYSUTCDATETIME(), @deferProcessingUntilTime);
+      END
 END
 GO
 
